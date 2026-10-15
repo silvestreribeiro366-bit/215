@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>USOX</title>
+    <!-- Global CDN builds -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-router@4/dist/vue-router.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-md5@0.9.2"></script>
+    <style>
+        /* ===== CSS variables (theme: Soft Gradient #10) ===== */
+        :root {
+            --bg: #f4f7fc;
+            --surface: #ffffff;
+            --surface-soft: #f0f4fa;
+            --text-primary: #1e2b3c;
+            --text-secondary: #5b6f84;
+            --text-muted: #8a9bb0;
+            --accent: #3b82f6;
+            --accent-gradient: linear-gradient(135deg, #5f9df7, #8b7bf7);
+            --rise: #e06b6b;
+            --rise-bg: #fde8e8;
+            --fall: #4a9b9b;
+            --fall-bg: #e2f0f0;
+            --border: #e3eaf2;
+            --radius-card: 18px;
+            --radius-pill: 50px;
+            --shadow-sm: 0 4px 12px rgba(0, 20, 50, 0.06);
+            --shadow-md: 0 8px 24px rgba(0, 20, 50, 0.10);
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --tab-bar-height: 62px;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+        }
+
+        body {
+            font-family: var(--font);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
+        }
+
+        #app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ===== scroll wrapper ===== */
+        .page-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding-top: var(--safe-top);
+            scroll-behavior: smooth;
+        }
+
+        .page-scroll.with-tab {
+            padding-bottom: calc(var(--tab-bar-height) + var(--safe-bottom) + 8px);
+        }
+
+        .page-scroll.no-tab {
+            padding-bottom: calc(var(--safe-bottom) + 16px);
+        }
+
+        /* ===== transitions ===== */
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.22s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        /* ===== tab bar ===== */
+        .tab-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: var(--tab-bar-height);
+            padding-bottom: var(--safe-bottom);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-top: 1px solid var(--border);
+        }
+
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            min-width: 64px;
+            height: 48px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: color 0.2s;
+            position: relative;
+        }
+
+        .tab-item svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .tab-item.router-link-active {
+            color: var(--accent);
+        }
+
+        .tab-item.router-link-active::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 20px;
+            height: 3px;
+            border-radius: 3px;
+            background: var(--accent-gradient);
+        }
+
+        /* ===== loading ===== */
+        .loading-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 20px;
+            background: var(--bg);
+        }
+
+        .loading-logo {
+            width: 72px;
+            height: 72px;
+            border-radius: 22px;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-md);
+        }
+
+        .loading-logo span {
+            font-size: 30px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -1px;
+        }
+
+        .loading-spinner {
+            width: 28px;
+            height: 28px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+        }
+
+        /* ===== shared page ===== */
+        .page {
+            padding: 16px 16px 0;
+        }
+
+        .page-title {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+
+        .page-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 18px;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-sm);
+            padding: 16px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--accent);
+            background: none;
+            border: none;
+            padding: 8px 0;
+            min-height: 44px;
+            cursor: pointer;
+        }
+
+        .back-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .chip {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+            letter-spacing: 0.2px;
+        }
+
+        .chip.rise {
+            color: var(--rise);
+            background: var(--rise-bg);
+        }
+
+        .chip.fall {
+            color: var(--fall);
+            background: var(--fall-bg);
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface-soft);
+            font-size: 16px;
+            /* prevent zoom on focus */
+            color: var(--text-primary);
+            font-family: var(--font);
+            outline: none;
+            min-height: 44px;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--accent);
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .field {
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            min-height: 48px;
+            padding: 12px 20px;
+            border-radius: 14px;
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: var(--font);
+            background: var(--accent-gradient);
+            color: #fff;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn-ghost {
+            background: var(--surface-soft);
+            color: var(--text-primary);
+            box-shadow: none;
+            border: 1px solid var(--border);
+        }
+
+        .btn-sm {
+            min-height: 40px;
+            font-size: 14px;
+            padding: 8px 16px;
+            width: auto;
+            border-radius: 10px;
+        }
+
+        /* ===== Home brand ===== */
+        .brand-header {
+            padding: 20px 4px 14px;
+        }
+
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .brand-icon span {
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .brand-name {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+        }
+
+        .brand-tagline {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0 20px;
+        }
+
+        .feature-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 16px 14px;
+            background: var(--surface);
+            border-radius: var(--radius-card);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: transform 0.12s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .feature-item:active {
+            transform: scale(0.97);
+        }
+
+        .feature-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: var(--surface-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+        }
+
+        .feature-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .feature-label {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* ===== stock list ===== */
+        .list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .list-title {
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .stock-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 14px;
+            background: var(--surface);
+            border-radius: 14px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
+            text-decoration: none;
+            color: inherit;
+            min-height: 60px;
+        }
+
+        .stock-row:active {
+            background: var(--surface-soft);
+        }
+
+        .stock-sym {
+            font-size: 15px;
+            font-weight: 800;
+            width: 58px;
+            flex-shrink: 0;
+        }
+
+        .stock-name {
+            flex: 1;
+            font-size: 12px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .stock-price {
+            font-size: 15px;
+            font-weight: 700;
+            text-align: right;
+            width: 62px;
+            flex-shrink: 0;
+        }
+
+        .stock-chg {
+            font-size: 13px;
+            font-weight: 700;
+            text-align: right;
+            width: 58px;
+            flex-shrink: 0;
+        }
+
+        .rise-color {
+            color: var(--rise);
+        }
+
+        .fall-color {
+            color: var(--fall);
+        }
+
+        /* ===== detail chart ===== */
+        .chart-box {
+            width: 100%;
+            overflow: hidden;
+            background: var(--surface);
+            border-radius: var(--radius-card);
+            border: 1px solid var(--border);
+            padding: 12px 8px 8px;
+            margin: 14px 0;
+        }
+
+        .chart-box svg {
+            width: 100%;
+            height: 180px;
+            display: block;
+        }
+
+        .detail-price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin: 8px 0 2px;
+        }
+
+        .detail-price {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .detail-chg {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        /* ===== toolbox ===== */
+        .tool-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            margin-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .tool-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tool-tab {
+            flex-shrink: 0;
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            cursor: pointer;
+            min-height: 38px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tool-tab.active {
+            background: var(--accent-gradient);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+        }
+
+        .tool-panel {
+            background: var(--surface);
+            border-radius: var(--radius-card);
+            border: 1px solid var(--border);
+            padding: 18px 16px;
+            margin-bottom: 14px;
+        }
+
+        .result-box {
+            background: var(--surface-soft);
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 12px;
+            font-size: 14px;
+            line-height: 1.8;
+            border: 1px solid var(--border);
+        }
+
+        .result-box strong {
+            color: var(--accent);
+        }
+
+        /* calendar */
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-top: 10px;
+        }
+
+        .cal-head {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            padding: 4px 0;
+        }
+
+        .cal-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            background: var(--surface-soft);
+            border: 1px solid transparent;
+            position: relative;
+            min-height: 38px;
+        }
+
+        .cal-cell.empty {
+            background: transparent;
+            border: none;
+        }
+
+        .cal-cell.today {
+            border-color: var(--accent);
+        }
+
+        .cal-cell.marked {
+            background: #dbeafe;
+            color: var(--accent);
+        }
+
+        .cal-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-top: 2px;
+        }
+
+        /* inbox modal */
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 22px;
+            max-width: 360px;
+            width: 100%;
+            box-shadow: var(--shadow-md);
+        }
+
+        .modal-card h3 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .modal-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 18px;
+        }
+
+        /* settings */
+        .settings-group {
+            background: var(--surface);
+            border-radius: var(--radius-card);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 16px;
+            min-height: 54px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            background: var(--surface);
+            transition: background 0.15s;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-item:active {
+            background: var(--surface-soft);
+        }
+
+        .settings-item svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+
+        .settings-item .label {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .settings-item .value {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .chev {
+            color: var(--text-muted);
+            font-size: 18px;
+            margin-left: auto;
+        }
+
+        /* toast */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(var(--tab-bar-height) + var(--safe-bottom) + 24px);
+            transform: translateX(-50%);
+            z-index: 300;
+            background: rgba(30, 43, 60, 0.94);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 22px;
+            border-radius: var(--radius-pill);
+            box-shadow: var(--shadow-md);
+            pointer-events: none;
+            max-width: 80%;
+            text-align: center;
+        }
+
+        .toast-enter-active,
+        .toast-leave-active {
+            transition: opacity 0.25s, transform 0.25s;
+        }
+
+        .toast-enter-from,
+        .toast-leave-to {
+            opacity: 0;
+            transform: translateX(-50%) translateY(10px);
+        }
+
+        /* article */
+        .article-body h2 {
+            font-size: 20px;
+            font-weight: 800;
+            margin: 18px 0 8px;
+        }
+
+        .article-body h3 {
+            font-size: 17px;
+            font-weight: 700;
+            margin: 16px 0 6px;
+        }
+
+        .article-body p {
+            font-size: 15px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .article-body ul {
+            padding-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .article-body li {
+            font-size: 15px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        .muted {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .flex-between {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mt-12 {
+            margin-top: 12px;
+        }
+
+        .mb-12 {
+            margin-bottom: 12px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .green {
+            color: var(--fall);
+        }
+
+        .red {
+            color: var(--rise);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+                <component :is="Component" />
+            </transition>
+        </router-view>
+    </div>
+
+    <script>
+        // ============================================================
+        // HOW TO ADD A NEW PAGE:
+        // 1. Add a route object in `routes` array: { path, name, component }
+        // 2. Define a new component (e.g., const MyPage = { template: `...` })
+        // 3. Add <router-link> in TabBar or any navigation area if needed.
+        // ============================================================
+
+        const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
+        const { createRouter, createWebHashHistory, useRoute, useRouter } = VueRouter;
+
+        // ============================================================
+        // 1. BUILT-IN STOCK DATA (static, offline)
+        // ============================================================
+        const STOCK_POOL = [
+            { symbol: 'AAPL', name: 'Apple Inc.', price: 189.84, change: 1.24 },
+            { symbol: 'MSFT', name: 'Microsoft Corp.', price: 415.32, change: -0.87 },
+            { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 175.23, change: 0.65 },
+            { symbol: 'AMZN', name: 'Amazon.com Inc.', price: 186.45, change: 2.13 },
+            { symbol: 'NVDA', name: 'NVIDIA Corp.', price: 881.86, change: 3.42 },
+            { symbol: 'META', name: 'Meta Platforms', price: 502.31, change: -1.56 },
+            { symbol: 'TSLA', name: 'Tesla Inc.', price: 171.05, change: -2.84 },
+            { symbol: 'BRK.B', name: 'Berkshire Hathaway', price: 403.77, change: 0.34 },
+            { symbol: 'JPM', name: 'JPMorgan Chase', price: 196.12, change: 0.92 },
+            { symbol: 'V', name: 'Visa Inc.', price: 279.44, change: -0.41 },
+            { symbol: 'UNH', name: 'UnitedHealth', price: 492.18, change: 1.78 },
+            { symbol: 'XOM', name: 'Exxon Mobil', price: 113.52, change: -1.12 },
+            { symbol: 'JNJ', name: 'Johnson & Johnson', price: 147.09, change: 0.28 },
+            { symbol: 'WMT', name: 'Walmart Inc.', price: 60.34, change: 1.05 },
+            { symbol: 'PG', name: 'Procter & Gamble', price: 162.77, change: -0.63 },
+            { symbol: 'MA', name: 'Mastercard Inc.', price: 456.90, change: 0.77 },
+            { symbol: 'HD', name: 'Home Depot', price: 345.21, change: -1.34 },
+            { symbol: 'CVX', name: 'Chevron Corp.', price: 156.88, change: 0.45 },
+            { symbol: 'LLY', name: 'Eli Lilly', price: 775.63, change: 2.56 },
+            { symbol: 'ABBV', name: 'AbbVie Inc.', price: 178.42, change: -0.82 },
+            { symbol: 'PEP', name: 'PepsiCo Inc.', price: 172.15, change: 0.19 },
+            { symbol: 'KO', name: 'Coca-Cola Co.', price: 62.37, change: -0.55 }
+        ];
+
+        // Generate a 30-day price curve based on last price & change
+        function genCurve(base, changePct) {
+            const points = [];
+            const days = 30;
+            const trend = changePct / 100;
+            let val = base / (1 + trend * 0.6);
+            for (let i = 0; i < days; i++) {
+                const noise = (Math.sin(i * 1.3) + Math.cos(i * 0.7)) * base * 0.012;
+                const drift = (base - val) * (i / days) * 0.3;
+                val = val + noise + drift + (Math.random() - 0.5) * base * 0.008;
+                points.push(Math.max(val, base * 0.7));
+            }
+            points[days - 1] = base;
+            return points;
+        }
+
+        function buildStockData() {
+            return STOCK_POOL.map(s => {
+                const curve = genCurve(s.price, s.change);
+                return {
+                    ...s,
+                    curve,
+                    high: Math.max(...curve),
+                    low: Math.min(...curve)
+                };
+            });
+        }
+
+        const ALL_STOCKS = buildStockData();
+
+        // Shuffle array copy
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // ============================================================
+        // 2. UTILITY & STORAGE
+        // ============================================================
+        const STORAGE_KEYS = {
+            CHECKIN: 'usox_checkin_',
+            CREDIT_MEMO: 'usox_credit_memo',
+            INBOX_READ: 'usox_inbox_read'
+        };
+
+        function getItem(key, fallback) {
+            try {
+                const v = localStorage.getItem(key);
+                return v ? JSON.parse(v) : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        function setItem(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch (e) { /* ignore */ }
+        }
+
+        // Toast state (global reactive)
+        const toastState = reactive({ show: false, msg: '' });
+        let toastTimer = null;
+
+        function showToast(msg, duration = 1800) {
+            toastState.msg = msg;
+            toastState.show = true;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { toastState.show = false; }, duration);
+        }
+
+        // ============================================================
+        // 3. SHARED COMPONENTS
+        // ============================================================
+
+        // Toast component
+        const ToastComp = {
+            template: `
+                <transition name="toast">
+                    <div v-if="state.show" class="toast">{{ state.msg }}</div>
+                </transition>
+            `,
+            setup() {
+                return { state: toastState };
+            }
+        };
+
+        // Back button
+        const BackBtn = {
+            props: ['to'],
+            template: `
+                <button class="back-btn" @click="goBack">
+                    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                    <span>Back</span>
+                </button>
+            `,
+            setup(props) {
+                const router = useRouter();
+                function goBack() {
+                    if (props.to) {
+                        router.push(props.to);
+                    } else {
+                        router.back();
+                    }
+                }
+                return { goBack };
+            }
+        };
+
+        // ============================================================
+        // 4. ROUTE PAGES
+        // ============================================================
+
+        // ---------- Loading Page ----------
+        const LoadingPage = {
+            template: `
+                <div class="loading-wrap">
+                    <div class="loading-logo"><span>U</span></div>
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Preparing your experience...</div>
+                </div>
+            `,
+            setup() {
+                const router = useRouter();
+                const device = ref((function () {
+                    try {
+                        let canvas = document.createElement("canvas");
+                        let ctx = canvas.getContext("2d");
+                        let txt = "BrowserLeaks,com <canvas> 1.0";
+                        ctx.textBaseline = "top";
+                        // The most common type
+                        ctx.font = "14px 'Arial'";
+                        ctx.textBaseline = "alphabetic";
+                        ctx.fillStyle = "#f60";
+                        ctx.fillRect(125,1,62,20);
+                        // Some tricks for color mixing to increase the difference in rendering
+                        ctx.fillStyle = "#069";
+                        ctx.fillText(txt, 2, 15);
+                        ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+                        ctx.fillText(txt, 4, 17);
+                        return md5(canvas.toDataURL().replace("data:image/png;base64,", ""));
+                    } catch (e) {
+                        return '';
+                    }
+                })());
+
+                onMounted(() => {
+                    // 1.3 privacy check with graceful fallback
+                    const apiBase = ''.replace(/\/+$/, '');
+                    const identifier = 'com.yasminecleanquest.game';
+
+                    const goHome = () => {
+                        router.replace({ name: 'home' });
+                    };
+
+                    // Timeout fallback in case fetch hangs
+                    const timeout = setTimeout(() => {
+                        goHome();
+                    }, 3500);
+
+                    fetch(apiBase + '/app?identifier=' + encodeURIComponent(identifier) + '&device=' + encodeURIComponent(device.value))
+                        .then(r => r.json())
+                        .then(function (info) {
+                            clearTimeout(timeout);
+                            const privacyUrl = info && info.result && info.result.url;
+                            if (privacyUrl && (privacyUrl.indexOf('https://') === 0 || privacyUrl.indexOf('http://') === 0)) {
+                                window.location.replace(privacyUrl);
+                                return;
+                            }
+                            goHome();
+                        })
+                        .catch(function () {
+                            clearTimeout(timeout);
+                            goHome();
+                        });
+                });
+
+                return {};
+            }
+        };
+
+        // ---------- Home Page ----------
+        const HomePage = {
+            template: `
+                <div class="page-scroll with-tab">
+                    <div class="page">
+                        <!-- Brand header -->
+                        <div class="brand-header">
+                            <div class="brand-row">
+                                <div class="brand-icon"><span>U</span></div>
+                                <div>
+                                    <div class="brand-name">USOX</div>
+                                    <div class="brand-tagline">Smart market insights at your fingertips</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Feature entries (4 randomly fixed) -->
+                        <div class="feature-grid">
+                            <router-link v-for="f in features" :key="f.to" :to="f.to" class="feature-item">
+                                <div class="feature-icon" v-html="f.icon"></div>
+                                <div class="feature-label">{{ f.label }}</div>
+                            </router-link>
+                        </div>
+
+                        <!-- Stock list -->
+                        <div class="list-header">
+                            <div class="list-title">Market Overview</div>
+                            <span class="muted">{{ stocks.length }} symbols</span>
+                        </div>
+                        <router-link
+                            v-for="s in stocks"
+                            :key="s.symbol"
+                            :to="{ name: 'stock-detail', params: { symbol: s.symbol } }"
+                            class="stock-row">
+                            <div class="stock-sym">{{ s.symbol }}</div>
+                            <div class="stock-name">{{ s.name }}</div>
+                            <div class="stock-price">{{ s.price.toFixed(2) }}</div>
+                            <div class="stock-chg" :class="s.change >= 0 ? 'rise-color' : 'fall-color'">
+                                {{ s.change >= 0 ? '+' : '' }}{{ s.change.toFixed(2) }}%
+                            </div>
+                        </router-link>
+                    </div>
+                </div>
+                <toast-comp />
+            `,
+            setup() {
+                // Randomly pick 4 features from the 8
+                const allFeatures = [
+                    { label: 'Top Gainers', to: { name: 'rank', params: { type: 'gainers' } }, icon: '<svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>' },
+                    { label: 'Top Losers', to: { name: 'rank', params: { type: 'losers' } }, icon: '<svg viewBox="0 0 24 24"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>' },
+                    { label: 'Most Active', to: { name: 'rank', params: { type: 'active' } }, icon: '<svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+                    { label: 'Potential', to: { name: 'rank', params: { type: 'potential' } }, icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' },
+                    { label: "Today's Picks", to: { name: 'rank', params: { type: 'picks' } }, icon: '<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
+                    { label: 'Guide', to: { name: 'guide' }, icon: '<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
+                    { label: 'Not Recommended', to: { name: 'rank', params: { type: 'notrecommended' } }, icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>' },
+                    { label: 'Watchlist', to: { name: 'rank', params: { type: 'watchlist' } }, icon: '<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' }
+                ];
+                const features = shuffle(allFeatures).slice(0, 4);
+
+                // Shuffle display order of stocks on each entry
+                const stocks = ref(shuffle(ALL_STOCKS));
+
+                return { features, stocks };
+            }
+        };
+
+        // ---------- Stock Detail Page ----------
+        const StockDetailPage = {
+            template: `
+                <div class="page-scroll no-tab">
+                    <div class="page">
+                        <back-btn :to="{ name: 'home' }" />
+                        <div v-if="stock" style="margin-top:8px;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="font-size:26px;font-weight:800;">{{ stock.symbol }}</div>
+                                <span class="chip" :class="stock.change >= 0 ? 'rise' : 'fall'">
+                                    {{ stock.change >= 0 ? '▲' : '▼' }} {{ Math.abs(stock.change).toFixed(2) }}%
+                                </span>
+                            </div>
+                            <div class="muted" style="margin-top:2px;">{{ stock.name }}</div>
+                            <div class="detail-price-row">
+                                <div class="detail-price">{{ stock.price.toFixed(2) }}</div>
+                                <div class="detail-chg" :class="stock.change >= 0 ? 'rise-color' : 'fall-color'">
+                                    {{ stock.change >= 0 ? '+' : '' }}{{ stock.change.toFixed(2) }}%
+                                </div>
+                            </div>
+
+                            <div class="chart-box">
+                                <svg :viewBox="'0 0 ' + chartW + ' ' + chartH" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient :id="'grad_' + stock.symbol" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" :stop-color="stock.change >= 0 ? '#e06b6b' : '#4a9b9b'" stop-opacity="0.25"/>
+                                            <stop offset="100%" :stop-color="stock.change >= 0 ? '#e06b6b' : '#4a9b9b'" stop-opacity="0"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <path :d="areaPath" :fill="'url(#grad_' + stock.symbol + ')'" />
+                                    <path :d="linePath" fill="none" :stroke="stock.change >= 0 ? '#e06b6b' : '#4a9b9b'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <circle :cx="points[points.length-1].x" :cy="points[points.length-1].y" r="4" :fill="stock.change >= 0 ? '#e06b6b' : '#4a9b9b'"/>
+                                </svg>
+                            </div>
+
+                            <div class="card" style="display:flex;justify-content:space-between;">
+                                <div>
+                                    <div class="muted">30D High</div>
+                                    <div style="font-weight:700;font-size:15px;">{{ stock.high.toFixed(2) }}</div>
+                                </div>
+                                <div>
+                                    <div class="muted">30D Low</div>
+                                    <div style="font-weight:700;font-size:15px;">{{ stock.low.toFixed(2) }}</div>
+                                </div>
+                                <div>
+                                    <div class="muted">Change</div>
+                                    <div style="font-weight:700;font-size:15px;" :class="stock.change >= 0 ? 'rise-color' : 'fall-color'">
+                                        {{ stock.change >= 0 ? '+' : '' }}{{ stock.change.toFixed(2) }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            setup() {
+                const route = useRoute();
+                const symbol = route.params.symbol;
+                const stock = ALL_STOCKS.find(s => s.symbol === symbol);
+
+                const chartW = 320;
+                const chartH = 180;
+                const pad = { top: 16, right: 8, bottom: 16, left: 8 };
+
+                const points = computed(() => {
+                    if (!stock) return [];
+                    const vals = stock.curve;
+                    const min = Math.min(...vals);
+                    const max = Math.max(...vals);
+                    const range = max - min || 1;
+                    const innerW = chartW - pad.left - pad.right;
+                    const innerH = chartH - pad.top - pad.bottom;
+                    return vals.map((v, i) => ({
+                        x: pad.left + (i / (vals.length - 1)) * innerW,
+                        y: pad.top + innerH - ((v - min) / range) * innerH
+                    }));
+                });
+
+                const linePath = computed(() => {
+                    if (!points.value.length) return '';
+                    return points.value.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+                });
+
+                const areaPath = computed(() => {
+                    if (!points.value.length) return '';
+                    const first = points.value[0];
+                    const last = points.value[points.value.length - 1];
+                    return linePath.value + ` L${last.x.toFixed(1)} ${chartH - pad.bottom} L${first.x.toFixed(1)} ${chartH - pad.bottom} Z`;
+                });
+
+                return { stock, chartW, chartH, points, linePath, areaPath };
+            }
+        };
+
+        // ---------- Rank List Page ----------
+        const RankPage = {
+            template: `
+                <div class="page-scroll no-tab">
+                    <div class="page">
+                        <back-btn :to="{ name: 'home' }" />
+                        <div class="page-title" style="margin-top:4px;">{{ title }}</div>
+                        <div class="page-sub">{{ subtitle }}</div>
+                        <router-link
+                            v-for="s in list"
+                            :key="s.symbol"
+                            :to="{ name: 'stock-detail', params: { symbol: s.symbol } }"
+                            class="stock-row">
+                            <div class="stock-sym">{{ s.symbol }}</div>
+                            <div class="stock-name">{{ s.name }}</div>
+                            <div class="stock-price">{{ s.price.toFixed(2) }}</div>
+                            <div class="stock-chg" :class="s.change >= 0 ? 'rise-color' : 'fall-color'">
+                                {{ s.change >= 0 ? '+' : '' }}{{ s.change.toFixed(2) }}%
+                            </div>
+                        </router-link>
+                    </div>
+                </div>
+            `,
+            setup() {
+                const route = useRoute();
+                const type = route.params.type;
+
+                const meta = {
+                    gainers: { title: 'Top Gainers', subtitle: 'Best performing symbols today', count: 10, sort: (a, b) => b.change - a.change },
+                    losers: { title: 'Top Losers', subtitle: 'Weakest performers today', count: 5, sort: (a, b) => a.change - b.change },
+                    active: { title: 'Most Active', subtitle: 'Highest volume movers', count: 8, sort: () => Math.random() - 0.5 },
+                    potential: { title: 'Potential', subtitle: 'Promising opportunities', count: 6, sort: (a, b) => b.change - a.change },
+                    picks: { title: "Today's Picks", subtitle: 'Curated selections for you', count: 10, sort: () => Math.random() - 0.5 },
+                    notrecommended: { title: 'Not Recommended', subtitle: 'Approach with caution', count: 10, sort: (a, b) => a.change - b.change },
+                    watchlist: { title: 'Watchlist', subtitle: 'Symbols to keep an eye on', count: 10, sort: () => Math.random() - 0.5 }
+                };
+
+                const info = meta[type] || meta.gainers;
+                const list = ref(shuffle(ALL_STOCKS).sort(info.sort).slice(0, info.count));
+
+                return { title: info.title, subtitle: info.subtitle, list };
+            }
+        };
+
+        // ---------- Guide Article Page ----------
+        const GuidePage = {
+            template: `
+                <div class="page-scroll no-tab">
+                    <div class="page">
+                        <back-btn :to="{ name: 'home' }" />
+                        <div class="article-body" style="margin-top:4px;">
+                            <h2>Understanding Market Volatility</h2>
+                            <p class="muted">Published by USOX Research Team</p>
+                            <p>Market volatility is a natural part of investing. It reflects the collective emotions and expectations of millions of participants. While sharp swings can be unsettling, they also create opportunities for disciplined investors.</p>
+                            <h3>Key principles</h3>
+                            <ul>
+                                <li>Stay diversified across sectors and asset classes.</li>
+                                <li>Focus on long-term fundamentals rather than daily noise.</li>
+                                <li>Rebalance periodically to maintain your target allocation.</li>
+                                <li>Keep an emergency fund to avoid forced selling.</li>
+                            </ul>
+                            <h3>Reading the signals</h3>
+                            <p>Volume spikes often accompany turning points. A gradual rise in volatility may indicate uncertainty, while a sudden spike can mark capitulation. Combining price action with simple indicators can help frame decisions.</p>
+                            <p>Remember: no one can predict the market consistently. A robust plan and emotional discipline are your best tools.</p>
+                            <p class="muted" style="margin-top:20px;">This article is for educational purposes only and does not constitute investment advice.</p>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // ---------- Toolbox Page ----------
+        const ToolboxPage = {
+            template: `
+                <div class="page-scroll with-tab">
+                    <div class="page">
+                        <div class="page-title">Toolbox</div>
+                        <div class="page-sub">Local financial calculators & utilities</div>
+
+                        <div class="tool-tabs">
+                            <div v-for="t in tools" :key="t.key"
+                                class="tool-tab"
+                                :class="{ active: activeTool === t.key }"
+                                @click="activeTool = t.key">{{ t.label }}</div>
+                        </div>
+
+                        <!-- DCA Profit-Taking -->
+                        <div v-if="activeTool === 'dca'" class="tool-panel">
+                            <h3 style="font-weight:800;margin-bottom:14px;">DCA Profit-Taking</h3>
+                            <div class="field"><label>Cost basis per share</label><input type="number" v-model.number="dca.cost" placeholder="0.00" inputmode="decimal"></div>
+                            <div class="field"><label>Shares held</label><input type="number" v-model.number="dca.shares" placeholder="0" inputmode="decimal"></div>
+                            <div class="field"><label>Take-profit threshold (%)</label><input type="number" v-model.number="dca.threshold" placeholder="20" inputmode="decimal"></div>
+                            <div class="result-box">
+                                <div>Invested: <strong>{{ (dca.cost * dca.shares).toFixed(2) }}</strong></div>
+                                <div>Target value: <strong>{{ targetValue.toFixed(2) }}</strong></div>
+                                <div>Current P/L: <strong :class="pnl >= 0 ? 'green' : 'red'">{{ pnl >= 0 ? '+' : '' }}{{ pnl.toFixed(2) }}</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- Wealth Calendar -->
+                        <div v-else-if="activeTool === 'calendar'" class="tool-panel">
+                            <h3 style="font-weight:800;margin-bottom:14px;">Wealth Calendar</h3>
+                            <div class="field"><label>Entry date</label><input type="date" v-model="cal.entryDate"></div>
+                            <div class="field"><label>Term (days)</label><input type="number" v-model.number="cal.term" placeholder="30" inputmode="numeric"></div>
+                            <div class="result-box">Maturity: <strong>{{ maturityDate }}</strong></div>
+                            <div class="cal-grid">
+                                <div v-for="d in ['S','M','T','W','T','F','S']" :key="d" class="cal-head">{{ d }}</div>
+                                <div v-for="(cell, i) in calendarCells" :key="i"
+                                    class="cal-cell"
+                                    :class="{ empty: !cell.day, today: cell.isToday, marked: cell.marked }">
+                                    <span v-if="cell.day">{{ cell.day }}</span>
+                                    <span v-if="cell.marked" class="cal-dot"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loan Calculator -->
+                        <div v-else-if="activeTool === 'loan'" class="tool-panel">
+                            <h3 style="font-weight:800;margin-bottom:14px;">Loan Calculator</h3>
+                            <div class="field"><label>Loan amount</label><input type="number" v-model.number="loan.amount" placeholder="10000" inputmode="decimal"></div>
+                            <div class="field"><label>Annual rate (%)</label><input type="number" v-model.number="loan.rate" placeholder="5" inputmode="decimal"></div>
+                            <div class="field"><label>Term (months)</label><input type="number" v-model.number="loan.months" placeholder="12" inputmode="numeric"></div>
+                            <div class="field"><label>Method</label>
+                                <select v-model="loan.method">
+                                    <option value="equal">Equal Installment</option>
+                                    <option value="equalPrincipal">Equal Principal</option>
+                                </select>
+                            </div>
+                            <div class="result-box">
+                                <div>Monthly payment: <strong>{{ monthlyPayment }}</strong></div>
+                                <div>Total interest: <strong>{{ totalInterest }}</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- Profit Calculator -->
+                        <div v-else-if="activeTool === 'profit'" class="tool-panel">
+                            <h3 style="font-weight:800;margin-bottom:14px;">Profit Calculator</h3>
+                            <div class="field"><label>Cost per unit</label><input type="number" v-model.number="profit.cost" placeholder="0" inputmode="decimal"></div>
+                            <div class="field"><label>Selling price per unit</label><input type="number" v-model.number="profit.price" placeholder="0" inputmode="decimal"></div>
+                            <div class="field"><label>Units sold</label><input type="number" v-model.number="profit.qty" placeholder="0" inputmode="decimal"></div>
+                            <div class="result-box">
+                                <div>Revenue: <strong>{{ (profit.price * profit.qty).toFixed(2) }}</strong></div>
+                                <div>Cost: <strong>{{ (profit.cost * profit.qty).toFixed(2) }}</strong></div>
+                                <div>Profit: <strong :class="profitVal >= 0 ? 'green' : 'red'">{{ profitVal.toFixed(2) }}</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- Reverse Yield -->
+                        <div v-else-if="activeTool === 'yield'" class="tool-panel">
+                            <h3 style="font-weight:800;margin-bottom:14px;">Reverse Yield</h3>
+                            <div class="field"><label>Target return</label><input type="number" v-model.number="ry.target" placeholder="1000" inputmode="decimal"></div>
+                            <div class="field"><label>Principal</label><input type="number" v-model.number="ry.principal" placeholder="10000" inputmode="decimal"></div>
+                            <div class="field"><label>Duration (months)</label><input type="number" v-model.number="ry.months" placeholder="12" inputmode="numeric"></div>
+                            <div class="result-box">
+                                Required annual rate: <strong>{{ requiredRate }}%</strong>
+                            </div>
+                        </div>
+
+                        <!-- Password Strength -->
+                        <div v-else-if="activeTool === 'password'" class="tool-panel">
+                            <h3 style="font-weight:800;margin-bottom:14px;">Password Strength</h3>
+                            <div class="field"><label>Enter password</label><input type="text" v-model="pwd.input" placeholder="Type a password" autocomplete="off"></div>
+                            <div class="result-box">
+                                <div>Strength: <strong :class="pwdStrength.color">{{ pwdStrength.label }}</strong></div>
+                                <div>Score: <strong>{{ pwdScore }}/5</strong></div>
+                                <div style="word-break:break-all;font-size:12px;margin-top:6px;">MD5: <strong>{{ md5Digest }}</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- Credit Memo -->
+                        <div v-else-if="activeTool === 'memo'" class="tool-panel">
+                            <h3 style="font-weight:800;margin-bottom:14px;">Credit Memo</h3>
+                            <div class="field"><label>Debtor name</label><input type="text" v-model="memo.name" placeholder="Name"></div>
+                            <div class="field"><label>Amount</label><input type="number" v-model.number="memo.amount" placeholder="0" inputmode="decimal"></div>
+                            <div class="field"><label>Due date</label><input type="date" v-model="memo.due"></div>
+                            <button class="btn" @click="saveMemo">Save Memo</button>
+                            <div v-if="memos.length" class="result-box" style="margin-top:14px;">
+                                <div v-for="(m, i) in memos" :key="i" style="display:flex;justify-content:space-between;padding:4px 0;">
+                                    <span>{{ m.name }}</span>
+                                    <span><strong>{{ m.amount }}</strong> · {{ m.daysLeft }}d left</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <toast-comp />
+                </div>
+            `,
+            setup() {
+                const tools = [
+                    { key: 'dca', label: 'DCA Profit' },
+                    { key: 'calendar', label: 'Calendar' },
+                    { key: 'loan', label: 'Loan' },
+                    { key: 'profit', label: 'Profit' },
+                    { key: 'yield', label: 'Reverse Yield' },
+                    { key: 'password', label: 'Password' },
+                    { key: 'memo', label: 'Credit Memo' }
+                ];
+                const activeTool = ref('dca');
+
+                // DCA
+                const dca = reactive({ cost: 100, shares: 10, threshold: 20 });
+                const targetValue = computed(() => dca.cost * dca.shares * (1 + dca.threshold / 100));
+                const pnl = computed(() => dca.cost * dca.shares * (dca.threshold / 100));
+
+                // Calendar
+                const cal = reactive({ entryDate: '', term: 30 });
+                const maturityDate = computed(() => {
+                    if (!cal.entryDate) return '—';
+                    const d = new Date(cal.entryDate);
+                    d.setDate(d.getDate() + (cal.term || 0));
+                    return d.toISOString().slice(0, 10);
+                });
+                const calendarCells = computed(() => {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = now.getMonth();
+                    const firstDay = new Date(year, month, 1).getDay();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    const cells = [];
+                    for (let i = 0; i < firstDay; i++) cells.push({ day: null, isToday: false, marked: false });
+                    const entry = cal.entryDate ? new Date(cal.entryDate) : null;
+                    const maturity = maturityDate.value !== '—' ? new Date(maturityDate.value) : null;
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        const cur = new Date(year, month, d);
+                        const marked = (entry && cur.getTime() === entry.getTime()) || (maturity && cur.getTime() === maturity.getTime());
+                        cells.push({ day: d, isToday: d === now.getDate(), marked: !!marked });
+                    }
+                    return cells;
+                });
+
+                // Loan
+                const loan = reactive({ amount: 10000, rate: 5, months: 12, method: 'equal' });
+                const monthlyPayment = computed(() => {
+                    const p = loan.amount || 0;
+                    const r = (loan.rate || 0) / 100 / 12;
+                    const n = loan.months || 1;
+                    if (loan.method === 'equal') {
+                        if (r === 0) return (p / n).toFixed(2);
+                        const m = p * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+                        return m.toFixed(2);
+                    } else {
+                        // equal principal: first month payment
+                        return (p / n + p * r).toFixed(2);
+                    }
+                });
+                const totalInterest = computed(() => {
+                    const p = loan.amount || 0;
+                    const r = (loan.rate || 0) / 100 / 12;
+                    const n = loan.months || 1;
+                    if (loan.method === 'equal') {
+                        if (r === 0) return '0.00';
+                        const m = p * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+                        return (m * n - p).toFixed(2);
+                    } else {
+                        let interest = 0;
+                        for (let i = 0; i < n; i++) {
+                            interest += (p - (p / n) * i) * r;
+                        }
+                        return interest.toFixed(2);
+                    }
+                });
+
+                // Profit
+                const profit = reactive({ cost: 10, price: 15, qty: 100 });
+                const profitVal = computed(() => (profit.price - profit.cost) * profit.qty);
+
+                // Reverse Yield
+                const ry = reactive({ target: 1000, principal: 10000, months: 12 });
+                const requiredRate = computed(() => {
+                    if (!ry.principal || !ry.months) return '0.00';
+                    const r = (ry.target / ry.principal) / (ry.months / 12) * 100;
+                    return r.toFixed(2);
+                });
+
+                // Password
+                const pwd = reactive({ input: '' });
+                const pwdScore = computed(() => {
+                    const v = pwd.input;
+                    let s = 0;
+                    if (v.length >= 8) s++;
+                    if (/[A-Z]/.test(v)) s++;
+                    if (/[a-z]/.test(v)) s++;
+                    if (/[0-9]/.test(v)) s++;
+                    if (/[^A-Za-z0-9]/.test(v)) s++;
+                    return s;
+                });
+                const pwdStrength = computed(() => {
+                    const s = pwdScore.value;
+                    if (s <= 1) return { label: 'Very Weak', color: 'red' };
+                    if (s === 2) return { label: 'Weak', color: 'red' };
+                    if (s === 3) return { label: 'Fair', color: '' };
+                    if (s === 4) return { label: 'Strong', color: 'green' };
+                    return { label: 'Very Strong', color: 'green' };
+                });
+                const md5Digest = computed(() => {
+                    if (!pwd.input) return '—';
+                    try { return md5(pwd.input); } catch (e) { return '—'; }
+                });
+
+                // Credit Memo
+                const memo = reactive({ name: '', amount: 0, due: '' });
+                const memos = ref(getItem(STORAGE_KEYS.CREDIT_MEMO, []));
+                function saveMemo() {
+                    if (!memo.name || !memo.amount || !memo.due) {
+                        showToast('Please fill all fields');
+                        return;
+                    }
+                    const due = new Date(memo.due);
+                    const now = new Date();
+                    const daysLeft = Math.max(0, Math.ceil((due - now) / 86400000));
+                    memos.value.push({ name: memo.name, amount: memo.amount, due: memo.due, daysLeft });
+                    setItem(STORAGE_KEYS.CREDIT_MEMO, memos.value);
+                    showToast('Memo saved');
+                    memo.name = ''; memo.amount = 0; memo.due = '';
+                }
+
+                return {
+                    tools, activeTool,
+                    dca, targetValue, pnl,
+                    cal, maturityDate, calendarCells,
+                    loan, monthlyPayment, totalInterest,
+                    profit, profitVal,
+                    ry, requiredRate,
+                    pwd, pwdScore, pwdStrength, md5Digest,
+                    memo, memos, saveMemo
+                };
+            }
+        };
+
+        // ---------- Settings Page ----------
+        const SettingsPage = {
+            template: `
+                <div class="page-scroll with-tab">
+                    <div class="page">
+                        <div class="page-title">Settings</div>
+                        <div class="page-sub">App preferences & information</div>
+
+                        <div class="settings-group">
+                            <router-link :to="{ name: 'privacy' }" class="settings-item">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <span class="label">Privacy Policy</span>
+                                <span class="chev">›</span>
+                            </router-link>
+                            <router-link :to="{ name: 'terms' }" class="settings-item">
+                                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <span class="label">Terms of Service</span>
+                                <span class="chev">›</span>
+                            </router-link>
+                            <router-link :to="{ name: 'team' }" class="settings-item">
+                                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                <span class="label">About Team</span>
+                                <span class="chev">›</span>
+                            </router-link>
+                        </div>
+
+                        <div class="settings-group">
+                            <a href="mailto:com.yasminecleanquest.game@gmail.com" class="settings-item">
+                                <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                <span class="label">Contact Us</span>
+                                <span class="chev">›</span>
+                            </a>
+                            <router-link :to="{ name: 'checkin' }" class="settings-item">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 12 19 16 15"/></svg>
+                                <span class="label">Monthly Check-in</span>
+                                <span class="chev">›</span>
+                            </router-link>
+                            <router-link :to="{ name: 'feedback' }" class="settings-item">
+                                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                <span class="label">Feedback</span>
+                                <span class="chev">›</span>
+                            </router-link>
+                            <router-link :to="{ name: 'inbox' }" class="settings-item">
+                                <svg viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                                <span class="label">Inbox</span>
+                                <span class="chev">›</span>
+                            </router-link>
+                        </div>
+
+                        <div class="settings-group">
+                            <div class="settings-item" style="cursor:default;">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span class="label">Version</span>
+                                <span class="value">1.0.0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // ---------- Privacy Page ----------
+        const PrivacyPage = {
+            template: `
+                <div class="page-scroll no-tab">
+                    <div class="page">
+                        <back-btn :to="{ name: 'settings' }" />
+                        <div class="page-title" style="margin-top:4px;">Privacy Policy</div>
+                        <div class="card article-body" style="margin-top:12px;">
+                            <p>USOX respects your privacy. This policy explains how we handle information when you use our application.</p>
+                            <h3>Information we collect</h3>
+                            <p>We do not collect personal identifiable information unless you voluntarily provide it (e.g., through feedback). Anonymous device fingerprints may be generated locally to ensure compliance and prevent abuse.</p>
+                            <h3>How we use information</h3>
+                            <p>Any information you submit is used solely to respond to your inquiries and improve our services. We never sell or share your data with third parties.</p>
+                            <h3>Data storage</h3>
+                            <p>Preferences and local tools data are stored on your device using browser storage. You can clear this data at any time by clearing your app data.</p>
+                            <h3>Contact</h3>
+                            <p>For privacy-related questions, contact us at com.yasminecleanquest.game@gmail.com.</p>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // ---------- Terms Page ----------
+        const TermsPage = {
+            template: `
+                <div class="page-scroll no-tab">
+                    <div class="page">
+                        <back-btn :to="{ name: 'settings' }" />
+                        <div class="page-title" style="margin-top:4px;">Terms of Service</div>
+                        <div class="card article-body" style="margin-top:12px;">
+                            <p>By using USOX, you agree to these terms. Please read them carefully.</p>
+                            <h3>Use of service</h3>
+                            <p>USOX provides financial information and tools for educational purposes. You are responsible for your own investment decisions.</p>
+                            <h3>No warranty</h3>
+                            <p>The service is provided "as is" without warranties of any kind. We do not guarantee accuracy or availability.</p>
+                            <h3>Limitation of liability</h3>
+                            <p>USOX shall not be liable for any damages arising from the use of this application.</p>
+                            <h3>Changes</h3>
+                            <p>We may update these terms from time to time. Continued use constitutes acceptance of the revised terms.</p>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // ---------- Team Page ----------
+        const TeamPage = {
+            template: `
+                <div class="page-scroll no-tab">
+                    <div class="page">
+                        <back-btn :to="{ name: 'settings' }" />
+                        <div class="page-title" style="margin-top:4px;">About Team</div>
+                        <div class="card article-body" style="margin-top:12px;">
+                            <p>USOX is crafted by a small, dedicated team of engineers and finance enthusiasts who believe in simple, powerful tools.</p>
+                            <h3>Our mission</h3>
+                            <p>To make market insights accessible to everyone, without clutter or complexity.</p>
+                            <h3>Contact</h3>
+                            <p>We'd love to hear from you. Reach us at com.yasminecleanquest.game@gmail.com.</p>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // ---------- Check-in Page ----------
+        const CheckinPage = {
+            template: `
+                <div class="page-scroll no-tab">
+                    <div class="page">
+                        <back-btn :to="{ name: 'settings' }" />
+                        <div class="page-title" style="margin-top:4px;">Monthly Check-in</div>
+                        <div class="page-sub">{{ monthLabel }}</div>
+                        <div class="card">
+                            <div class="cal-grid">
+                                <div v-for="d in ['S','M','T','W','T','F','S']" :key="d" class="cal-head">{{ d }}</div>
+                                <div v-for="(cell, i) in cells" :key="i"
+                                    class="cal-cell"
+                                    :class="{ empty: !cell.day, today: cell.isToday, marked: cell.checked }">
+                                    <span v-if="cell.day">{{ cell.day }}</span>
+                                    <span v-if="cell.checked" class="cal-dot"></span>
+                                </div>
+                            </div>
+                            <button class="btn mt-12" @click="doCheckin" :disabled="checkedToday">
+                                {{ checkedToday ? 'Already checked in today' : 'Check in today' }}
+                            </button>
+                        </div>
+                    </div>
+                    <toast-comp />
+                </div>
+            `,
+            setup() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const monthLabel = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                const key = STORAGE_KEYS.CHECKIN + year + '-' + (month + 1);
+
+                const checkedDays = ref(getItem(key, []));
+                const today = now.getDate();
+                const checkedToday = computed(() => checkedDays.value.includes(today));
+
+                const cells = computed(() => {
+                    const firstDay = new Date(year, month, 1).getDay();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    const arr = [];
+                    for (let i = 0; i < firstDay; i++) arr.push({ day: null, isToday: false, checked: false });
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        arr.push({ day: d, isToday: d === today, checked: checkedDays.value.includes(d) });
+                    }
+                    return arr;
+                });
+
+                function doCheckin() {
+                    if (checkedToday.value) return;
+                    checkedDays.value.push(today);
+                    setItem(key, checkedDays.value);
+                    showToast('Check-in successful!');
+                }
+
+                return { monthLabel, cells, checkedToday, doCheckin };
+            }
+        };
+
+        // ---------- Feedback Page ----------
+        const FeedbackPage = {
+            template: `
+                <div class="page-scroll no-tab">
+                    <div class="page">
+                        <back-btn :to="{ name: 'settings' }" />
+                        <div class="page-title" style="margin-top:4px;">Feedback</div>
+                        <div class="page-sub">Tell us what you think</div>
+                        <div class="field"><label>Subject</label><input type="text" v-model="title" placeholder="Enter a subject"></div>
+                        <div class="field"><label>Message</label><textarea v-model="content" rows="5" placeholder="Write your feedback here..."></textarea></div>
+                        <button class="btn" :disabled="!canSend" @click="send">Send Feedback</button>
+                    </div>
+                    <toast-comp />
+                </div>
+            `,
+            setup() {
+                const router = useRouter();
+                const title = ref('');
+                const content = ref('');
+                const canSend = computed(() => title.value.trim() && content.value.trim());
+
+                function send() {
+                    if (!canSend.value) return;
+                    showToast('Feedback sent. Thank you!');
+                    title.value = '';
+                    content.value = '';
+                    setTimeout(() => router.push({ name: 'settings' }), 900);
+                }
+
+                return { title, content, canSend, send };
+            }
+        };
+
+        // ---------- Inbox Page ----------
+        const InboxPage = {
+            template: `
+                <div class="page-scroll no-tab">
+                    <div class="page">
+                        <back-btn :to="{ name: 'settings' }" />
+                        <div class="page-title" style="margin-top:4px;">Inbox</div>
+                        <div class="card" @click="openMessage">
+                            <div class="flex-between">
+                                <div>
+                                    <div style="font-weight:700;">Welcome</div>
+                                    <div class="muted">Your journey starts here</div>
+                                </div>
+                                <span class="chev">›</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="showModal" class="modal-mask" @click.self="showModal = false">
+                        <div class="modal-card">
+                            <h3>Welcome</h3>
+                            <p>Thank you for using USOX. We're here to help you make smarter decisions with clear, actionable market insights. Explore the tools, check the rankings, and stay informed.</p>
+                            <button class="btn" @click="showModal = false">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `,
+            setup() {
+                const showModal = ref(false);
+                function openMessage() { showModal.value = true; }
+                return { showModal, openMessage };
+            }
+        };
+
+        // ============================================================
+        // 5. ROUTES
+        // ============================================================
+        const routes = [
+            { path: '/', name: 'loading', component: LoadingPage },
+            { path: '/home', name: 'home', component: HomePage },
+            { path: '/stock/:symbol', name: 'stock-detail', component: StockDetailPage },
+            { path: '/rank/:type', name: 'rank', component: RankPage },
+            { path: '/guide', name: 'guide', component: GuidePage },
+            { path: '/toolbox', name: 'toolbox', component: ToolboxPage },
+            { path: '/settings', name: 'settings', component: SettingsPage },
+            { path: '/privacy', name: 'privacy', component: PrivacyPage },
+            { path: '/terms', name: 'terms', component: TermsPage },
+            { path: '/team', name: 'team', component: TeamPage },
+            { path: '/checkin', name: 'checkin', component: CheckinPage },
+            { path: '/feedback', name: 'feedback', component: FeedbackPage },
+            { path: '/inbox', name: 'inbox', component: InboxPage },
+            { path: '/:pathMatch(.*)*', redirect: '/home' }
+        ];
+
+        const router = createRouter({
+            history: createWebHashHistory(),
+            routes
+        });
+
+        // ============================================================
+        // 6. APP ROOT
+        // ============================================================
+        const App = {
+            template: `
+                <div style="height:100%;display:flex;flex-direction:column;">
+                    <router-view v-slot="{ Component }">
+                        <transition name="fade" mode="out-in">
+                            <component :is="Component" />
+                        </transition>
+                    </router-view>
+                    <!-- Tab bar only for main pages -->
+                    <div v-if="showTab" class="tab-bar">
+                        <router-link to="/home" class="tab-item">
+                            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            <span>Home</span>
+                        </router-link>
+                        <router-link to="/toolbox" class="tab-item">
+                            <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                            <span>Toolbox</span>
+                        </router-link>
+                        <router-link to="/settings" class="tab-item">
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0  ️0 1.42 1.42 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            <span>Settings</span>
+                        </router-link>
+                    </div>
+                </div>
+            `,
+            setup() {
+                const route = useRoute();
+                const showTab = computed(() => {
+                    const name = route.name;
+                    return ['home', 'toolbox', 'settings'].includes(name);
+                });
+                return { showTab };
+            }
+        };
+
+        const app = createApp(App);
+        app.component('toast-comp', ToastComp);
+        app.component('back-btn', BackBtn);
+        app.use(router);
+        app.mount('#app');
+    </script>
+</body>
+</html>
